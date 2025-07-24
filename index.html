@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TicTac Game </title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+            user-select: none;
+        }
+
+        /* Desktop Background */
+        .desktop-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            transition: all 0.5s ease;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e, #16213e);
+        }
+
+        .desktop-background.theme-ocean {
+            background: linear-gradient(135deg, #1e3c72, #2a5298, #0f4c75);
+        }
+
+        .desktop-background.theme-sunset {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b, #ff6b35);
+        }
+
+        .desktop-background.theme-forest {
+            background: linear-gradient(135deg, #134e5e, #71b280, #0e3b2f);
+        }
+
+        /* Animated particles */
+        .particle {
+            position: absolute;
+            background: radial-gradient(circle, #00d4ff, #ff0080);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+            opacity: 0.1;
+            pointer-events: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.1; }
+            50% { transform: translateY(-50px) rotate(180deg); opacity: 0.3; }
+        }
+
+        /* Desktop Icons */
+        .desktop-icons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 5;
+        }
+
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            width: 80px;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+
+        .icon-image {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 5px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .icon-label {
+            color: white;
+            font-size: 11px;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Window Styles */
+        .window {
+            position: absolute;
+            background: rgba(30, 30, 50, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            z-index: 100;
+            transition: all 0.3s ease;
+            min-width: 300px;
+            min-height: 200px;
+            display: none;
+        }
+
+        .window.active {
+            display: block;
+        }
+
+        .window.minimized {
+            transform: scale(0.1);
+            opacity: 0;
+        }
+
+        .window-header {
+            background: linear-gradient(135deg, #1e1e3f, #2a2a4a);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: move;
+        }
+
+        .window-title {
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-control {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .minimize { background: #ffbd2e; }
+        .maximize { background: #28ca42; }
+        .close { background: #ff5f56; }
+
+        .window-control:hover {
+            transform: scale(1.2);
+        }
+
+        .window-content {
+            padding: 20px;
+            color: white;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+
+        /* Game Window */
+        #gameWindow {
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            max-height: 80vh;
+        }
+
+        /* Game Styles */
+        .game-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            background: linear-gradient(135deg, #00d4ff, #ff0080);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .game-setup {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .mode-btn.active {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.2);
+        }
+
+        .player-inputs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .player-group {
+            flex: 1;
+            text-align: center;
+        }
+
+        .player-label {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .player-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .player-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .player-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .difficulty-selector {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .difficulty-btn {
+            padding: 6px 12px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.8rem;
+        }
+
+        .difficulty-btn.active {
+            border-color: #ff0080;
+            background: rgba(255, 0, 128, 0.2);
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff0080, #cc0066);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffaa00, #ff6600);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28ca42, #20a034);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .score-item {
+            text-align: center;
+            color: white;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            opacity: 0.8;
+        }
+
+        .player-name {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .player-x { color: #ff0080; }
+        .player-o { color: #00d4ff; }
+        .draws { color: #ffaa00; }
+
+        .game-info {
+            text-align: center;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .current-player {
+            color: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 80px);
+            grid-template-rows: repeat(3, 80px);
+            gap: 8px;
+            margin: 20px auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            justify-content: center;
+        }
+
+        .cell {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            border: none;
+            border-radius: 12px;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .cell:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+            transform: scale(1.05);
+        }
+
+        .cell:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .cell.x {
+            color: #ff0080;
+            animation: popIn 0.4s ease;
+        }
+
+        .cell.o {
+            color: #00d4ff;
+            animation: popIn 0.4s ease;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .winning-cell {
+            background: linear-gradient(135deg, #ffaa00, #ff6600) !important;
+            animation: winGlow 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes winGlow {
+            0% { box-shadow: 0 0 20px rgba(255, 170, 0, 0.6); }
+            100% { box-shadow: 0 0 30px rgba(255, 170, 0, 0.9); }
+        }
+
+        .game-status {
+            text-align: center;
+            margin: 20px 0;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: white;
+            min-height: 30px;
+        }
+
+        .winner {
+            color: #ffaa00;
+            animation: celebrate 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes celebrate {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        .draw {
+            color: #a5b1c2;
+            font-style: italic;
+        }
+
+        /* Other Window Styles */
+        .settings-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .settings-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #00d4ff;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 21px;
+            height: 21px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(25px);
+        }
+
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .theme-option {
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            text-align: center;
+            color: white;
+        }
+
+        .theme-option.active {
+            border-color: #00d4ff;
+        }
+
+        .theme-default { background: linear-gradient(135deg, #0f0f23, #1a1a2e); }
+        .theme-ocean { background: linear-gradient(135deg, #1e3c72, #2a5298); }
+        .theme-sunset { background: linear-gradient(135deg, #ff416c, #ff4b2b); }
+        .theme-forest { background: linear-gradient(135deg, #134e5e, #71b280); }
+
+        /* Calculator */
+        .calculator {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .calc-display {
+            grid-column: 1 / -1;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: right;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .calc-btn {
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .calc-btn:hover {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+        }
+
+        .calc-btn.operator {
+            background: linear-gradient(135deg, #ff0080, #cc0066);
+        }
+
+        .calc-btn.equals {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+        }
+
+        /* Taskbar */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: rgba(20, 20, 40, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+
+        .start-button {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .start-button:hover {
+            background: linear-gradient(135deg, #0099cc, #007aa3);
+            transform: translateY(-2px);
+        }
+
+        .taskbar-apps {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .taskbar-app {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+        }
+
+        .taskbar-app.active {
+            background: rgba(0, 212, 255, 0.3);
+            border-color: rgba(0, 212, 255, 0.5);
+        }
+
+        .taskbar-app:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .system-tray {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .clock {
+            font-weight: bold;
+        }
+
+        /* Start Menu */
+        .start-menu {
+            position: fixed;
+            bottom: 70px;
+            left: 20px;
+            width: 350px;
+            background: rgba(20, 20, 40, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            z-index: 1001;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .start-menu.active {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .start-menu-apps {
+            padding: 15px;
+        }
+
+        .start-app {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .start-app:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .start-app-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(20, 20, 40, 0.95);
+            backdrop-filter: blur(20px);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border-left: 4px solid #00d4ff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notification.success { border-left-color: #28ca42; }
+        .notification.error { border-left-color: #ff5f56; }
+        .notification.warning { border-left-color: #ffbd2e; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .window {
+                width: 95vw !important;
+                height: 90vh !important;
+                top: 5vh !important;
+                left: 2.5vw !important;
+                transform: none !important;
+            }
+            
+            .game-board {
+                grid-template-columns: repeat(3, 60px);
+                grid-template-rows: repeat(3, 60px);
+            }
+            
+            .cell {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Desktop Background -->
+    <div class="desktop-background" id="desktopBg"></div>
+
+    <!-- Desktop Icons -->
+    <div class="desktop-icons">
+        <div class="desktop-icon" onclick="openWindow('gameWindow')">
+            <div class="icon-image">🎮</div>
+            <div class="icon-label">Tic Tac Toe</div>
+        </div>
+        <div class="desktop-icon" onclick="openWindow('settingsWindow')">
+            <div class="icon-image">⚙️</div>
+            <div class="icon-label">Settings</div>
+        </div>
+        <div class="desktop-icon" onclick="openWindow('calculatorWindow')">
+            <div class="icon-image">🔢</div>
+            <div class="icon-label">Calculator</div>
+        </div>
+    </div>
+
+    <!-- Game Window -->
+    <div class="window active" id="gameWindow">
+        <div class="window-header" onmousedown="startDrag(event, 'gameWindow')">
+            <div class="window-title">🎮 TicTacOS Game Center</div>
+            <div class="window-controls">
+                <div class="window-control minimize" onclick="minimizeWindow('gameWindow')"></div>
+                <div class="window-control maximize" onclick="maximizeWindow('gameWindow')"></div>
+                <div class="window-control close" onclick="closeWindow('gameWindow')"></div>
+            </div>
+        </div>
+        <div class="window-content">
+            <h1 class="game-title">🎮 Tic Tac Toe Pro</h1>
+            
+            <div class="game-setup">
+                <div class="mode-selector">
+                    <div class="mode-btn active" id="pvpMode" onclick="setGameMode('pvp')">👥 Player vs Player</div>
+                    <div class="mode-btn" id="pvcMode" onclick="setGameMode('pvc')">🤖 vs Computer</div>
+                </div>
+                
+                <div class="difficulty-selector" id="difficultySelector" style="display: none;">
+                    <div class="difficulty-btn active" id="easyBtn" onclick="setDifficulty('easy')">Easy</div>
+                    <div class="difficulty-btn" id="mediumBtn" onclick="setDifficulty('medium')">Medium</div>
+                    <div class="difficulty-btn" id="hardBtn" onclick="setDifficulty('hard')">Hard</div>
+                </div>
+                
+                <div class="player-inputs">
+                    <div class="player-group">
+                        <div class="player-label">Player X</div>
+                        <input type="text" class="player-input" id="playerXInput" placeholder="Enter name" maxlength="12">
+                    </div>
+                    <div class="player-group">
+                        <div class="player-label" id="playerOLabel">Player O</div>
+                        <input type="text" class="player-input" id="playerOInput" placeholder="Enter name" maxlength="12">
+                    </div>
+                </div>
+                
+                <div class="control-buttons">
+                    <button class="btn btn-primary" onclick="startGame()">🚀 Start Game</button>
+                    <button class="btn btn-danger" onclick="resetScores()">🔄 Reset Scores</button>
+                    <button class="btn btn-warning" onclick="cycleTheme()">🎨 Theme</button>
+                    <button class="btn btn-success" id="soundBtn" onclick="toggleSound()">🔊 Sound</button>
+                </div>
+            </div>
+
+            <div class="score-board">
+                <div class="score-item">
+                    <div class="score-label">Player X</div>
+                    <div class="player-name player-x" id="playerXName">Player 1</div>
+                    <div class="score-value player-x" id="scoreX">0</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">Draws</div>
+                    <div class="player-name draws">Ties</div>
+                    <div class="score-value draws" id="scoreDraw">0</div>
+                </div>
+                <div class="score-item">
+                    <div class="score-label">Player O</div>
+                    <div class="player-name player-o" id="playerOName">Player 2</div>
+                    <div class="score-value player-o" id="scoreO">0</div>
+                </div>
+            </div>
+
+            <div class="game-info">
+                <div class="current-player" id="currentPlayerDisplay">Click Start Game to begin!</div>
+            </div>
+
+            <div class="game-board" id="gameBoard">
+                <button class="cell" onclick="makeMove(0)"></button>
+                <button class="cell" onclick="makeMove(1)"></button>
+                <button class="cell" onclick="makeMove(2)"></button>
+                <button class="cell" onclick="makeMove(3)"></button>
+                <button class="cell" onclick="makeMove(4)"></button>
+                <button class="cell" onclick="makeMove(5)"></button>
+                <button class="cell" onclick="makeMove(6)"></button>
+                <button class="cell" onclick="makeMove(7)"></button>
+                <button class="cell" onclick="makeMove(8)"></button>
+            </div>
+
+            <div class="game-status" id="gameStatus"></div>
+
+            <div style="text-align: center;">
+                <button class="btn btn-danger" onclick="newRound()">🎯 New Round</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Window -->
+    <div class="window" id="settingsWindow">
+        <div class="window-header" onmousedown="startDrag(event, 'settingsWindow')">
+            <div class="window-title">⚙️ Settings</div>
+            <div class="window-controls">
+                <div class="window-control minimize" onclick="minimizeWindow('settingsWindow')"></div>
+                <div class="window-control maximize" onclick="maximizeWindow('settingsWindow')"></div>
+                <div class="window-control close" onclick="closeWindow('settingsWindow')"></div>
+            </div>
+        </div>
+        <div class="window-content">
+            <div class="settings-section">
+                <div class="settings-title">🎵 Audio Settings</div>
+                <div class="setting-item">
+                    <div>Sound Effects</div>
+                    <div class="toggle-switch active" id="soundToggle" onclick="toggleSoundSetting()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div>Background Music</div>
+                    <div class="toggle-switch" id="musicToggle" onclick="toggleMusicSetting()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-title">🎨 Theme Selection</div>
+                <div class="theme-grid">
+                    <div class="theme-option theme-default active" onclick="changeTheme('default')">
+                        <div>🌌 Default</div>
+                    </div>
+                    <div class="theme-option theme-ocean" onclick="changeTheme('ocean')">
+                        <div>🌊 Ocean</div>
+                    </div>
+                    <div class="theme-option theme-sunset" onclick="changeTheme('sunset')">
+                        <div>🌅 Sunset</div>
+                    </div>
+                    <div class="theme-option theme-forest" onclick="changeTheme('forest')">
+                        <div>🌲 Forest</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="settings-title">🎮 Game Settings</div>
+                <div class="setting-item">
+                    <div>Animations</div>
+                    <div class="toggle-switch active" id="animationsToggle" onclick="toggleAnimations()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <div>Auto-save Results</div>
+                    <div class="toggle-switch active" id="autosaveToggle" onclick="toggleAutosave()">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculator Window -->
+    <div class="window" id="calculatorWindow">
+        <div class="window-header" onmousedown="startDrag(event, 'calculatorWindow')">
+            <div class="window-title">🔢 Calculator</div>
+            <div class="window-controls">
+                <div class="window-control minimize" onclick="minimizeWindow('calculatorWindow')"></div>
+                <div class="window-control maximize" onclick="maximizeWindow('calculatorWindow')"></div>
+                <div class="window-control close" onclick="closeWindow('calculatorWindow')"></div>
+            </div>
+        </div>
+        <div class="window-content">
+            <div class="calculator">
+                <div class="calc-display" id="calcDisplay">0</div>
+                
+                <button class="calc-btn" onclick="clearCalc()">C</button>
+                <button class="calc-btn" onclick="calcBackspace()">⌫</button>
+                <button class="calc-btn operator" onclick="calcOperator('/')">/</button>
+                <button class="calc-btn operator" onclick="calcOperator('*')">×</button>
+                
+                <button class="calc-btn" onclick="calcNumber('7')">7</button>
+                <button class="calc-btn" onclick="calcNumber('8')">8</button>
+                <button class="calc-btn" onclick="calcNumber('9')">9</button>
+                <button class="calc-btn operator" onclick="calcOperator('-')">-</button>
+                
+                <button class="calc-btn" onclick="calcNumber('4')">4</button>
+                <button class="calc-btn" onclick="calcNumber('5')">5</button>
+                <button class="calc-btn" onclick="calcNumber('6')">6</button>
+                <button class="calc-btn operator" onclick="calcOperator('+')">+</button>
+                
+                <button class="calc-btn" onclick="calcNumber('1')">1</button>
+                <button class="calc-btn" onclick="calcNumber('2')">2</button>
+                <button class="calc-btn" onclick="calcNumber('3')">3</button>
+                <button class="calc-btn equals" onclick="calcEquals()" style="grid-row: span 2;">=</button>
+                
+                <button class="calc-btn" onclick="calcNumber('0')" style="grid-column: span 2;">0</button>
+                <button class="calc-btn" onclick="calcNumber('.')">.</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Taskbar -->
+    <div class="taskbar">
+        <button class="start-button" onclick="toggleStartMenu()">🖥️ TicTacOS</button>
+        <div class="taskbar-apps" id="taskbarApps">
+            <div class="taskbar-app active" onclick="openWindow('gameWindow')">🎮 Tic Tac Toe</div>
+        </div>
+        <div class="system-tray">
+            <div>🔊</div>
+            <div>📶</div>
+            <div>🔋</div>
+            <div class="clock" id="clock">12:00 PM</div>
+        </div>
+    </div>
+
+    <!-- Start Menu -->
+    <div class="start-menu" id="startMenu">
+        <div class="start-menu-apps">
+            <div class="start-app" onclick="openWindow('gameWindow')">
+                <div class="start-app-icon">🎮</div>
+                <div>Tic Tac Toe Pro</div>
+            </div>
+            <div class="start-app" onclick="openWindow('settingsWindow')">
+                <div class="start-app-icon">⚙️</div>
+                <div>Settings</div>
+            </div>
+            <div class="start-app" onclick="openWindow('calculatorWindow')">
+                <div class="start-app-icon">🔢</div>
+                <div>Calculator</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let currentPlayer = 'X';
+        let gameBoard = Array(9).fill('');
+        let gameActive = false;
+        let gameMode = 'pvp'; // 'pvp' or 'pvc'
+        let difficulty = 'easy'; // 'easy', 'medium', 'hard'
+        let playerNames = { X: 'Player 1', O: 'Player 2' };
+        let scores = { X: 0, O: 0, draw: 0 };
+
+        // System State Variables
+        let currentTheme = 'default';
+        let soundEnabled = true;
+        let musicEnabled = false;
+        let animationsEnabled = true;
+        let autosaveEnabled = true;
+        let openWindows = ['gameWindow'];
+
+        // Window dragging variables
+        let isDragging = false;
+        let dragTarget = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        // Calculator variables
+        let calcDisplay = '0';
+        let calcOperation = null;
+        let calcPrevValue = null;
+        let calcWaitingForNew = false;
+
+        // Initialize the application
+        function init() {
+            console.log('Initializing TicTacOS...');
+            createParticles();
+            updateClock();
+            setInterval(updateClock, 1000);
+            updateDisplay();
+            
+            // Add event listeners for closing menus
+            document.addEventListener('click', handleGlobalClick);
+            
+            // Position windows
+            positionWindows();
+            
+            console.log('TicTacOS initialized successfully!');
+        }
+
+        // Create animated particles
+        function createParticles() {
+            const bg = document.querySelector('.desktop-background');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const size = Math.random() * 4 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                
+                bg.appendChild(particle);
+            }
+        }
+
+        // Position windows initially
+        function positionWindows() {
+            const gameWindow = document.getElementById('gameWindow');
+            const settingsWindow = document.getElementById('settingsWindow');
+            const calculatorWindow = document.getElementById('calculatorWindow');
+            
+            // Game window - center
+            gameWindow.style.top = '10%';
+            gameWindow.style.left = '50%';
+            gameWindow.style.transform = 'translateX(-50%)';
+            
+            // Settings window - left side
+            settingsWindow.style.top = '15%';
+            settingsWindow.style.left = '10%';
+            settingsWindow.style.width = '400px';
+            settingsWindow.style.height = '500px';
+            
+            // Calculator window - right side
+            calculatorWindow.style.top = '20%';
+            calculatorWindow.style.right = '10%';
+            calculatorWindow.style.width = '280px';
+            calculatorWindow.style.height = '400px';
+        }
+
+        // Game Functions
+        function setGameMode(mode) {
+            console.log('Setting game mode to:', mode);
+            gameMode = mode;
+            
+            // Update UI
+            document.getElementById('pvpMode').classList.toggle('active', mode === 'pvp');
+            document.getElementById('pvcMode').classList.toggle('active', mode === 'pvc');
+            
+            const difficultySelector = document.getElementById('difficultySelector');
+            const playerOLabel = document.getElementById('playerOLabel');
+            const playerOInput = document.getElementById('playerOInput');
+            
+            if (mode === 'pvc') {
+                difficultySelector.style.display = 'flex';
+                playerOLabel.textContent = 'Computer';
+                playerOInput.placeholder = 'Computer';
+                playerOInput.value = 'Computer';
+                playerOInput.disabled = true;
+                playerNames.O = 'Computer';
+            } else {
+                difficultySelector.style.display = 'none';
+                playerOLabel.textContent = 'Player O';
+                playerOInput.placeholder = 'Enter name';
+                playerOInput.disabled = false;
+                playerNames.O = 'Player 2';
+            }
+            
+            playSound('click');
+            resetGame();
+        }
+
+        function setDifficulty(level) {
+            console.log('Setting difficulty to:', level);
+            difficulty = level;
+            
+            // Update UI
+            document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(level + 'Btn').classList.add('active');
+            
+            playSound('click');
+        }
+
+        function startGame() {
+            console.log('Starting game...');
+            
+            // Get player names
+            const playerX = document.getElementById('playerXInput').value.trim() || 'Player 1';
+            const playerO = gameMode === 'pvc' ? 'Computer' : 
+                           (document.getElementById('playerOInput').value.trim() || 'Player 2');
+            
+            playerNames.X = playerX;
+            playerNames.O = playerO;
+            
+            // Update display
+            document.getElementById('playerXName').textContent = playerX;
+            document.getElementById('playerOName').textContent = playerO;
+            
+            // Start the game
+            gameActive = true;
+            currentPlayer = 'X';
+            gameBoard = Array(9).fill('');
+            
+            // Enable cells
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.disabled = false;
+                cell.textContent = '';
+                cell.className = 'cell';
+            });
+            
+            updateDisplay();
+            playSound('click');
+            showNotification('Game started! Good luck!', 'success');
+        }
+
+        function makeMove(index) {
+            console.log('Making move at index:', index);
+            
+            if (!gameActive || gameBoard[index] !== '') {
+                playSound('error');
+                return;
+            }
+
+            // Make the move
+            gameBoard[index] = currentPlayer;
+            const cell = document.querySelectorAll('.cell')[index];
+            cell.textContent = currentPlayer;
+            cell.classList.add(currentPlayer.toLowerCase());
+            cell.disabled = true;
+            
+            playSound('move');
+            
+            // Check for win or draw
+            if (checkWin()) {
+                endGame('win');
+                return;
+            }
+            
+            if (gameBoard.every(cell => cell !== '')) {
+                endGame('draw');
+                return;
+            }
+            
+            // Switch players
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateDisplay();
+            
+            // Computer move in PvC mode
+            if (gameMode === 'pvc' && currentPlayer === 'O' && gameActive) {
+                setTimeout(() => {
+                    const move = getComputerMove();
+                    if (move !== -1) {
+                        makeMove(move);
+                    }
+                }, 500);
+            }
+        }
+
+        function checkWin() {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+                [0, 4, 8], [2, 4, 6] // diagonals
+            ];
+            
+            for (let pattern of winPatterns) {
+                const [a, b, c] = pattern;
+                if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
+                    highlightWinningCells(pattern);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function highlightWinningCells(pattern) {
+            const cells = document.querySelectorAll('.cell');
+            pattern.forEach(index => {
+                cells[index].classList.add('winning-cell');
+            });
+        }
+
+        function endGame(result) {
+            console.log('Game ended with result:', result);
+            gameActive = false;
+            
+            const statusElement = document.getElementById('gameStatus');
+            
+            if (result === 'win') {
+                const winner = currentPlayer;
+                const winnerName = playerNames[winner];
+                statusElement.innerHTML = `🎉 ${winnerName} Wins! 🏆`;
+                statusElement.className = 'game-status winner';
+                scores[winner]++;
+                playSound('win');
+                showNotification(`${winnerName} wins!`, 'success');
+            } else {
+                statusElement.innerHTML = "🤝 It's a Draw!";
+                statusElement.className = 'game-status draw';
+                scores.draw++;
+                playSound('draw');
+                showNotification("It's a draw!", 'info');
+            }
+            
+            updateDisplay();
+        }
+
+        function getComputerMove() {
+            const availableMoves = gameBoard.map((cell, index) => cell === '' ? index : null)
+                                           .filter(val => val !== null);
+            
+            if (availableMoves.length === 0) return -1;
+            
+            switch (difficulty) {
+                case 'easy':
+                    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                    
+                case 'medium':
+                    if (Math.random() < 0.7) {
+                        return getBestMove() || availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                    }
+                    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                    
+                case 'hard':
+                    return getBestMove() || availableMoves[Math.floor(Math.random() * availableMoves.length)];
+                    
+                default:
+                    return availableMoves[0];
+            }
+        }
+
+        function getBestMove() {
+            // Try to win
+            for (let i = 0; i < 9; i++) {
+                if (gameBoard[i] === '') {
+                    gameBoard[i] = 'O';
+                    if (checkWin()) {
+                        gameBoard[i] = '';
+                        return i;
+                    }
+                    gameBoard[i] = '';
+                }
+            }
+            
+            // Block opponent
+            for (let i = 0; i < 9; i++) {
+                if (gameBoard[i] === '') {
+                    gameBoard[i] = 'X';
+                    if (checkWin()) {
+                        gameBoard[i] = '';
+                        return i;
+                    }
+                    gameBoard[i] = '';
+                }
+            }
+            
+            // Take center
+            if (gameBoard[4] === '') return 4;
+            
+            // Take corners
+            const corners = [0, 2, 6, 8];
+            const availableCorners = corners.filter(i => gameBoard[i] === '');
+            if (availableCorners.length > 0) {
+                return availableCorners[Math.floor(Math.random() * availableCorners.length)];
+            }
+            
+            return null;
+        }
+
+        function newRound() {
+            console.log('Starting new round...');
+            gameBoard = Array(9).fill('');
+            currentPlayer = 'X';
+            
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+                cell.disabled = !gameActive;
+            });
+            
+            document.getElementById('gameStatus').innerHTML = '';
+            document.getElementById('gameStatus').className = 'game-status';
+            
+            updateDisplay();
+            playSound('click');
+        }
+
+        function resetGame() {
+            console.log('Resetting game...');
+            gameActive = false;
+            currentPlayer = 'X';
+            gameBoard = Array(9).fill('');
+            
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+                cell.disabled = true;
+            });
+            
+            document.getElementById('gameStatus').innerHTML = '';
+            document.getElementById('gameStatus').className = 'game-status';
+            
+            updateDisplay();
+        }
+
+        function resetScores() {
+            if (confirm('Reset all scores?')) {
+                scores = { X: 0, O: 0, draw: 0 };
+                updateDisplay();
+                showNotification('Scores reset!', 'info');
+                playSound('click');
+            }
+        }
+
+        function updateDisplay() {
+            // Update scores
+            document.getElementById('scoreX').textContent = scores.X;
+            document.getElementById('scoreO').textContent = scores.O;
+            document.getElementById('scoreDraw').textContent = scores.draw;
+            
+            // Update current player
+            const currentPlayerDisplay = document.getElementById('currentPlayerDisplay');
+            if (!gameActive) {
+                currentPlayerDisplay.textContent = 'Click Start Game to begin!';
+                currentPlayerDisplay.style.color = 'white';
+            } else {
+                const playerName = playerNames[currentPlayer];
+                currentPlayerDisplay.innerHTML = `🎯 ${playerName}'s Turn (${currentPlayer})`;
+                currentPlayerDisplay.style.color = currentPlayer === 'X' ? '#ff0080' : '#00d4ff';
+            }
+        }
+
+        // Window Management
+        function openWindow(windowId) {
+            console.log('Opening window:', windowId);
+            const window = document.getElementById(windowId);
+            window.classList.add('active');
+            window.classList.remove('minimized');
+            
+            if (!openWindows.includes(windowId)) {
+                openWindows.push(windowId);
+            }
+            
+            bringToFront(windowId);
+            updateTaskbar();
+            playSound('click');
+        }
+
+        function closeWindow(windowId) {
+            console.log('Closing window:', windowId);
+            const window = document.getElementById(windowId);
+            window.classList.remove('active');
+            
+            openWindows = openWindows.filter(id => id !== windowId);
+            updateTaskbar();
+            playSound('click');
+        }
+
+        function minimizeWindow(windowId) {
+            console.log('Minimizing window:', windowId);
+            const window = document.getElementById(windowId);
+            window.classList.add('minimized');
+            playSound('click');
+        }
+
+        function maximizeWindow(windowId) {
+            console.log('Maximizing window:', windowId);
+            const window = document.getElementById(windowId);
+            
+            if (window.style.width === '95vw') {
+                // Restore
+                window.style.width = '';
+                window.style.height = '';
+                window.style.top = '';
+                window.style.left = '';
+                window.style.right = '';
+                window.style.transform = '';
+                positionWindows();
+            } else {
+                // Maximize
+                window.style.width = '95vw';
+                window.style.height = '90vh';
+                window.style.top = '5vh';
+                window.style.left = '2.5vw';
+                window.style.right = 'auto';
+                window.style.transform = 'none';
+            }
+            playSound('click');
+        }
+
+        function bringToFront(windowId) {
+            const window = document.getElementById(windowId);
+            const maxZ = Math.max(...openWindows.map(id => 
+                parseInt(getComputedStyle(document.getElementById(id)).zIndex) || 100
+            ));
+            window.style.zIndex = maxZ + 1;
+        }
+
+        function updateTaskbar() {
+            const taskbarApps = document.getElementById('taskbarApps');
+            taskbarApps.innerHTML = '';
+            
+            const windowTitles = {
+                gameWindow: '🎮 Tic Tac Toe',
+                settingsWindow: '⚙️ Settings',
+                calculatorWindow: '🔢 Calculator'
+            };
+            
+            openWindows.forEach(windowId => {
+                const app = document.createElement('div');
+                app.className = 'taskbar-app';
+                app.textContent = windowTitles[windowId];
+                app.onclick = () => openWindow(windowId);
+                taskbarApps.appendChild(app);
+            });
+        }
+
+        // Window Dragging
+        function startDrag(e, windowId) {
+            console.log('Starting drag for:', windowId);
+            isDragging = true;
+            dragTarget = windowId;
+            
+            const window = document.getElementById(windowId);
+            const rect = window.getBoundingClientRect();
+            
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+            
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+            e.preventDefault();
+            
+            bringToFront(windowId);
+        }
+
+        function drag(e) {
+            if (!isDragging || !dragTarget) return;
+            
+            const window = document.getElementById(dragTarget);
+            const x = e.clientX - dragOffset.x;
+            const y = e.clientY - dragOffset.y;
+            
+            window.style.left = Math.max(0, Math.min(x, window.innerWidth - window.offsetWidth)) + 'px';
+            window.style.top = Math.max(0, Math.min(y, window.innerHeight - window.offsetHeight - 60)) + 'px';
+            window.style.right = 'auto';
+            window.style.transform = 'none';
+        }
+
+        function stopDrag() {
+            isDragging = false;
+            dragTarget = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        // Theme Functions
+        function changeTheme(theme) {
+            console.log('Changing theme to:', theme);
+            currentTheme = theme;
+            
+            const bg = document.getElementById('desktopBg');
+            bg.className = `desktop-background${theme !== 'default' ? ' theme-' + theme : ''}`;
+            
+            // Update theme selector
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelector(`.theme-${theme}`).classList.add('active');
+            
+            showNotification(`Theme changed to ${theme}`, 'success');
+            playSound('click');
+        }
+
+        function cycleTheme() {
+            const themes = ['default', 'ocean', 'sunset', 'forest'];
+            const currentIndex = themes.indexOf(currentTheme);
+            const nextTheme = themes[(currentIndex + 1) % themes.length];
+            changeTheme(nextTheme);
+        }
+
+        // Settings Functions
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').textContent = soundEnabled ? '🔊 Sound' : '🔇 Sound';
+            document.getElementById('soundToggle').classList.toggle('active', soundEnabled);
+            playSound('click');
+        }
+
+        function toggleSoundSetting() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').textContent = soundEnabled ? '🔊 Sound' : '🔇 Sound';
+            document.getElementById('soundToggle').classList.toggle('active', soundEnabled);
+            playSound('click');
+        }
+
+        function toggleMusicSetting() {
+            musicEnabled = !musicEnabled;
+            document.getElementById('musicToggle').classList.toggle('active', musicEnabled);
+            playSound('click');
+        }
+
+        function toggleAnimations() {
+            animationsEnabled = !animationsEnabled;
+            document.getElementById('animationsToggle').classList.toggle('active', animationsEnabled);
+            document.body.style.animationPlayState = animationsEnabled ? 'running' : 'paused';
+            playSound('click');
+        }
+
+        function toggleAutosave() {
+            autosaveEnabled = !autosaveEnabled;
+            document.getElementById('autosaveToggle').classList.toggle('active', autosaveEnabled);
+            playSound('click');
+        }
+
+        // Calculator Functions
+        function calcNumber(num) {
+            if (calcWaitingForNew) {
+                calcDisplay = num;
+                calcWaitingForNew = false;
+            } else {
+                calcDisplay = calcDisplay === '0' ? num : calcDisplay + num;
+            }
+            updateCalcDisplay();
+            playSound('click');
+        }
+
+        function calcOperator(op) {
+            if (calcOperation !== null && !calcWaitingForNew) {
+                calcEquals();
+            }
+            
+            calcPrevValue = parseFloat(calcDisplay);
+            calcOperation = op;
+            calcWaitingForNew = true;
+            playSound('click');
+        }
+
+        function calcEquals() {
+            if (calcOperation === null || calcWaitingForNew) return;
+            
+            const prev = calcPrevValue;
+            const current = parseFloat(calcDisplay);
+            let result;
+            
+            switch (calcOperation) {
+                case '+': result = prev + current; break;
+                case '-': result = prev - current; break;
+                case '*': result = prev * current; break;
+                case '/': result = current !== 0 ? prev / current : 'Error'; break;
+                default: return;
+            }
+            
+            calcDisplay = result.toString();
+            calcOperation = null;
+            calcPrevValue = null;
+            calcWaitingForNew = true;
+            updateCalcDisplay();
+            playSound('click');
+        }
+
+        function clearCalc() {
+            calcDisplay = '0';
+            calcOperation = null;
+            calcPrevValue = null;
+            calcWaitingForNew = false;
+            updateCalcDisplay();
+            playSound('click');
+        }
+
+        function calcBackspace() {
+            calcDisplay = calcDisplay.length > 1 ? calcDisplay.slice(0, -1) : '0';
+            updateCalcDisplay();
+            playSound('click');
+        }
+
+        function updateCalcDisplay() {
+            document.getElementById('calcDisplay').textContent = calcDisplay;
+        }
+
+        // System Functions
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            document.getElementById('clock').textContent = timeString;
+        }
+
+        function toggleStartMenu() {
+            document.getElementById('startMenu').classList.toggle('active');
+            playSound('click');
+        }
+
+        function handleGlobalClick(e) {
+            // Close start menu if clicking outside
+            if (!e.target.closest('.start-menu') && !e.target.closest('.start-button')) {
+                document.getElementById('startMenu').classList.remove('active');
+            }
+        }
+
+        // Sound System
+        function playSound(type) {
+            if (!soundEnabled) return;
+            
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                const sounds = {
+                    click: { frequency: 800, duration: 0.1 },
+                    win: { frequency: 659.25, duration: 0.5 },
+                    draw: { frequency: 523.25, duration: 0.3 },
+                    move: { frequency: 440, duration: 0.1 },
+                    error: { frequency: 200, duration: 0.2 }
+                };
+                
+                const sound = sounds[type] || sounds.click;
+                oscillator.frequency.value = sound.frequency;
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + sound.duration);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + sound.duration);
+            } catch (e) {
+                console.log('Sound not available');
+            }
+        }
+
+        // Notification System
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Fallback initialization
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
